@@ -1,0 +1,64 @@
+name: Auto Build and Upload Firmware
+
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'example/**'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Arduino CLI
+      uses: arduino/setup-arduino-cli@v1
+      with:
+        version: latest
+    
+    - name: Install ESP32 Board
+      run: |
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32
+    
+    - name: Compile Firmware
+      run: |
+        # Thay đổi đường dẫn sketch của bạn
+        arduino-cli compile --fqbn esp32:esp32:esp32s3 example/esp32_ota_example.ino
+    
+    - name: Export Binary
+      run: |
+        # Copy file .bin từ build folder
+        mkdir -p ota/firmware
+        find . -name "*.bin" -type f -exec cp {} ota/firmware/firmware.bin \;
+    
+    - name: Get Current Version
+      id: version
+      run: |
+        if [ -f ota/version.json ]; then
+          VERSION=$(cat ota/version.json | grep -o '"version": [0-9]*' | grep -o '[0-9]*')
+          NEW_VERSION=$((VERSION + 1))
+        else
+          NEW_VERSION=1
+        fi
+        echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "New version: $NEW_VERSION"
+    
+    - name: Update Version
+      run: |
+        echo "{\"version\": ${{ steps.version.outputs.version }}}" > ota/version.json
+    
+    - name: Commit and Push
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add ota/
+        git commit -m "Auto build: Update firmware to version ${{ steps.version.outputs.version }}" || exit 0
+        git push
+

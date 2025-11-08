@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTA Firmware Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            background: #f0f2ff;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragover {
+            background: #e8ebff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .firmware-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .firmware-card {
+            background: #f8f9ff;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+
+        .firmware-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .firmware-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .firmware-version {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .firmware-info {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .firmware-info strong {
+            color: #333;
+        }
+
+        .firmware-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .firmware-actions button {
+            flex: 1;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            opacity: 0.9;
+            font-size: 0.9em;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 OTA Firmware Manager</h1>
+            <p>Quản lý và phân phối firmware updates</p>
+        </div>
+
+        <div class="content">
+            <!-- Alert Messages -->
+            <div id="alert" class="alert"></div>
+
+            <!-- Stats -->
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalFirmwares">0</div>
+                    <div class="stat-label">Tổng Firmware</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalSize">0 MB</div>
+                    <div class="stat-label">Tổng Dung Lượng</div>
+                </div>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="section">
+                <h2 class="section-title">📤 Upload Firmware Mới</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <p style="font-size: 1.2em; margin-bottom: 20px; color: #666;">
+                        Kéo thả file firmware vào đây hoặc click để chọn
+                    </p>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="fileInput" class="file-input" accept=".bin,.hex,.elf">
+                        <button class="btn">Chọn File</button>
+                    </div>
+                    <p id="fileName" style="margin-top: 15px; color: #999; display: none;"></p>
+                </div>
+
+                <form id="uploadForm" style="margin-top: 30px;">
+                    <div class="form-group">
+                        <label for="version">Phiên bản (Version) *</label>
+                        <input type="text" id="version" placeholder="Ví dụ: 1.0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Mô tả (Description)</label>
+                        <textarea id="description" placeholder="Mô tả về firmware này..."></textarea>
+                    </div>
+                    <button type="submit" class="btn" id="uploadBtn">
+                        📤 Upload Firmware
+                    </button>
+                </form>
+            </div>
+
+            <!-- Firmware List Section -->
+            <div class="section">
+                <h2 class="section-title">📋 Danh Sách Firmware</h2>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px; color: #666;">Đang tải...</p>
+                </div>
+                <div id="firmwareList" class="firmware-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let selectedFile = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFirmwares();
+            setupUploadArea();
+            setupUploadForm();
+        });
+
+        // Setup upload area
+        function setupUploadArea() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            const fileName = document.getElementById('fileName');
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelect(files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileSelect(e.target.files[0]);
+                }
+            });
+        }
+
+        function handleFileSelect(file) {
+            selectedFile = file;
+            document.getElementById('fileName').textContent = `📄 ${file.name} (${formatFileSize(file.size)})`;
+            document.getElementById('fileName').style.display = 'block';
+        }
+
+        // Setup upload form
+        function setupUploadForm() {
+            document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                if (!selectedFile) {
+                    showAlert('Vui lòng chọn file firmware!', 'error');
+                    return;
+                }
+
+                const version = document.getElementById('version').value.trim();
+                if (!version) {
+                    showAlert('Vui lòng nhập phiên bản!', 'error');
+                    return;
+                }
+
+                const description = document.getElementById('description').value.trim();
+                const uploadBtn = document.getElementById('uploadBtn');
+                
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = '⏳ Đang upload...';
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', selectedFile);
+                    formData.append('version', version);
+                    if (description) {
+                        formData.append('description', description);
+                    }
+
+                    const response = await fetch(`${API_BASE}/api/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        showAlert('✅ Upload firmware thành công!', 'success');
+                        document.getElementById('uploadForm').reset();
+                        document.getElementById('fileName').style.display = 'none';
+                        selectedFile = null;
+                        loadFirmwares();
+                    } else {
+                        showAlert(`❌ Lỗi: ${data.detail || 'Upload thất bại'}`, 'error');
+                    }
+                } catch (error) {
+                    showAlert(`❌ Lỗi: ${error.message}`, 'error');
+                } finally {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '📤 Upload Firmware';
+                }
+            });
+        }
+
+        // Load firmwares
+        async function loadFirmwares() {
+            const loading = document.getElementById('loading');
+            const firmwareList = document.getElementById('firmwareList');
+            
+            loading.classList.add('show');
+            firmwareList.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/firmwares`);
+                const data = await response.json();
+
+                if (data.firmwares && data.firmwares.length > 0) {
+                    // Sort by version (newest first)
+                    const sorted = data.firmwares.sort((a, b) => {
+                        return compareVersions(b.version, a.version);
+                    });
+
+                    sorted.forEach(fw => {
+                        firmwareList.appendChild(createFirmwareCard(fw));
+                    });
+
+                    updateStats(data.firmwares);
+                } else {
+                    firmwareList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📦</div>
+                            <p style="font-size: 1.2em;">Chưa có firmware nào</p>
+                            <p style="margin-top: 10px;">Hãy upload firmware đầu tiên!</p>
+                        </div>
+                    `;
+                    updateStats([]);
+                }
+            } catch (error) {
+                showAlert(`❌ Lỗi khi tải danh sách: ${error.message}`, 'error');
+                firmwareList.innerHTML = `
+                    <div class="empty-state">
+                        <p>❌ Không thể tải danh sách firmware</p>
+                    </div>
+                `;
+            } finally {
+                loading.classList.remove('show');
+            }
+        }
+
+        // Create firmware card
+        function createFirmwareCard(fw) {
+            const card = document.createElement('div');
+            card.className = 'firmware-card';
+            
+            const releaseDate = fw.release_date ? new Date(fw.release_date).toLocaleString('vi-VN') : 'N/A';
+            
+            card.innerHTML = `
+                <div class="firmware-header">
+                    <div class="firmware-version">v${fw.version}</div>
+                </div>
+                <div class="file-name">📄 ${fw.filename}</div>
+                <div class="firmware-info">
+                    <strong>Kích thước:</strong> ${formatFileSize(fw.size)}<br>
+                    <strong>Checksum:</strong> <code style="font-size: 0.9em;">${fw.checksum.substring(0, 16)}...</code><br>
+                    ${fw.description ? `<strong>Mô tả:</strong> ${fw.description}<br>` : ''}
+                    <strong>Ngày upload:</strong> ${releaseDate}
+                </div>
+                <div class="firmware-actions">
+                    <button class="btn btn-success" onclick="downloadFirmware('${fw.version}')">
+                        ⬇️ Tải về
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteFirmware('${fw.version}')">
+                        🗑️ Xóa
+                    </button>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Download firmware
+        async function downloadFirmware(version) {
+            try {
+                window.open(`${API_BASE}/api/download/${version}`, '_blank');
+            } catch (error) {
+                showAlert(`❌ Lỗi khi tải firmware: ${error.message}`, 'error');
+            }
+        }
+
+        // Delete firmware
+        async function deleteFirmware(version) {
+            if (!confirm(`Bạn có chắc muốn xóa firmware version ${version}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/firmware/${version}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showAlert(`✅ Đã xóa firmware version ${version}`, 'success');
+                    loadFirmwares();
+                } else {
+                    const data = await response.json();
+                    showAlert(`❌ Lỗi: ${data.detail || 'Xóa thất bại'}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`❌ Lỗi: ${error.message}`, 'error');
+            }
+        }
+
+        // Update stats
+        function updateStats(firmwares) {
+            document.getElementById('totalFirmwares').textContent = firmwares.length;
+            
+            const totalSize = firmwares.reduce((sum, fw) => sum + fw.size, 0);
+            document.getElementById('totalSize').textContent = formatFileSize(totalSize);
+        }
+
+        // Utility functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function compareVersions(v1, v2) {
+            const parts1 = v1.split('.').map(Number);
+            const parts2 = v2.split('.').map(Number);
+            const maxLen = Math.max(parts1.length, parts2.length);
+            
+            for (let i = 0; i < maxLen; i++) {
+                const part1 = parts1[i] || 0;
+                const part2 = parts2[i] || 0;
+                if (part1 > part2) return 1;
+                if (part1 < part2) return -1;
+            }
+            return 0;
+        }
+
+        function showAlert(message, type = 'info') {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert alert-${type} show`;
+            
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
+
